@@ -1,0 +1,182 @@
+# Lanette Tyler
+# NCSU ST558
+# Project 2
+# Static Analysis
+
+# Read in packages --------------------------------------------------------------
+library(tidyverse)
+library(labelled)
+
+# Read data ---------------------------------------------------------------------
+user_behavior_dataset <- read_csv("user_behavior_dataset.csv")
+
+#Transform data
+phone_data <- user_behavior_dataset |>
+  rename("user_id" = "User ID", "model" = "Device Model", "op_system" = "Operating System", "app_usage_time" = "App Usage Time (min/day)", "screen_on_time" = "Screen On Time (hours/day)", "batt_drain" = "Battery Drain (mAh/day)", "no_apps" = "Number of Apps Installed", "data_usage" = "Data Usage (MB/day)", "age" = "Age", "gender" = "Gender", "user_class" = "User Behavior Class") |>
+  mutate(user_id = as.character(user_id), model = as.factor(model), op_system = as.factor(op_system), gender = as.factor(gender), user_class = as.factor(user_class))
+
+var_label(phone_data) <- list(user_id = "User ID", model = "Device Model", op_system = "Operating System", app_usage_time = "App Usage Time (min/day)", screen_on_time = "Screen On Time (hours/day)", batt_drain = "Battery Drain (mAh/day)", no_apps = "Number of Apps Installed", data_usage = "Data Usage (MB/day)", age = "Age", gender = "Gender", user_class = "User Behavior Class")
+
+# EDA ---------------------------------------------------------------------------
+# Contingency Tables and Bar Charts/Categorical Variables ------------------------
+#One Way
+table(phone_data$model) # leave this one off?
+table(phone_data$op_system)
+table(phone_data$gender)
+table(phone_data$user_class)
+
+#alternative method (This is better b/c labels)
+phone_data |>
+  group_by(model) |>
+  summarize(count = n())
+
+phone_data |>
+  group_by(op_system) |>
+  summarize(count = n())
+
+phone_data |>
+  group_by(gender) |>
+  summarize(count = n())
+
+phone_data |>
+  group_by(user_class) |>
+  summarize(count = n())
+
+# Two Way
+table(phone_data$model, phone_data$gender) #leave this one off?
+table(phone_data$op_system, phone_data$gender)
+table(phone_data$user_class, phone_data$gender)
+table(phone_data$model, phone_data$user_class)
+table(phone_data$op_system, phone_data$user_class)
+
+# Bar Charts
+# Operating System by Gender, faceted by user class
+ggplot(phone_data,aes(x = op_system, fill = gender)) +
+  geom_bar(position = "dodge") +
+  labs(x = var_label(phone_data$op_system),
+       title = "Bar Chart of Operating System by Gender Faceted by User Behavior Class") +
+  scale_fill_discrete(var_label(phone_data$gender)) +
+  facet_wrap(~user_class)
+
+# User Behavior by Gender
+ggplot(phone_data,aes(x = user_class, fill = gender)) +
+  geom_bar(position = "dodge") +
+  labs(x = var_label(phone_data$user_class),
+       title = "Bar Chart of User Behavior Class by Gender") +
+  scale_fill_discrete(var_label(phone_data$gender))
+
+# User Behavior by Operating System
+ggplot(phone_data,aes(x = user_class, fill = op_system)) +
+  geom_bar(position = "dodge") +
+  labs(x = var_label(phone_data$user_class),
+       title = "Bar Chart of User Behavior Class by Operating System") +
+  scale_fill_discrete(var_label(phone_data$op_system))
+
+# Quantitative Variables -----------------------------------------------------------
+# Numeric Summaries
+#Overall
+phone_data |> 
+  summarize("mean_app_usage_time" = mean(app_usage_time), "sd_app_usage_time" = sd(app_usage_time), "median_app_usage_time" = median(app_usage_time))
+
+phone_data |> 
+  summarize("mean_no_apps" = mean(no_apps), "sd_no_apps" = sd(no_apps), "median_no_apps" = median(no_apps))
+
+phone_data |> 
+  summarize("mean_age" = mean(age), "sd_age" = sd(age), "median_age" = median(age))
+
+#Numeric Summaries
+#By Groups
+#model
+phone_data |>
+  group_by(model) |>
+  summarize("mean_app_usage_time" = mean(app_usage_time), "sd_app_usage_time" = sd(app_usage_time), "median_app_usage_time" = median(app_usage_time))
+
+#op_system
+phone_data |>
+  group_by(op_system) |>
+summarize("mean_app_usage_time" = mean(app_usage_time), "sd_app_usage_time" = sd(app_usage_time), "median_app_usage_time" = median(app_usage_time))
+
+#gender
+phone_data |>
+  group_by(gender) |>
+  summarize("mean_app_usage_time" = mean(app_usage_time), "sd_app_usage_time" = sd(app_usage_time), "median_app_usage_time" = median(app_usage_time))
+
+#user_class
+phone_data |>
+  group_by(user_class) |>
+  summarize("mean_app_usage_time" = mean(app_usage_time), "sd_app_usage_time" = sd(app_usage_time), "median_app_usage_time" = median(app_usage_time))
+
+# Graphical Summaries
+# Smoothed Density Plots
+ggplot(phone_data, aes(x = app_usage_time)) +
+  geom_density(alpha = 0.5, aes(fill = gender)) +
+  facet_wrap(~op_system) + 
+  labs( x = var_label(phone_data$app_usage_time),
+        title = var_label(phone_data$app_usage_time))
+
+ggplot(phone_data, aes(x = no_apps)) +
+  geom_density(alpha = 0.5, aes(fill = gender)) +
+  facet_wrap(~op_system) + 
+  labs( x = var_label(phone_data$no_apps),
+        title = var_label(phone_data$no_apps))
+
+ggplot(phone_data, aes(x = age)) +
+  geom_density(alpha = 0.5, aes(fill = gender)) +
+  facet_wrap(~model) + 
+  labs( x = var_label(phone_data$age),
+        title = var_label(phone_data$age))
+
+#Graphical Summaries
+# Scatter Plots ----------------------------------------------------------
+ggplot(phone_data, aes(x = age, y = app_usage_time, color = op_system)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  labs(x = var_label(phone_data$age),
+       y = var_label(phone_data$app_usage_time),
+       title = "Scatter Plot") +
+  scale_color_discrete(var_label(phone_data$op_system))
+
+ggplot(phone_data, aes(x = app_usage_time, y = no_apps, color = gender)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  labs(x = var_label(phone_data$app_usage_time),
+       y = var_label(phone_data$no_apps),
+       title = "Scatter Plot") +
+  scale_color_discrete(var_label(phone_data$gender))
+
+ggplot(phone_data, aes(x = age, y = no_apps, color = op_system)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  labs(x = var_label(phone_data$age),
+       y = var_label(phone_data$no_apps),
+       title = "Scatter Plot") +
+  scale_color_discrete(var_label(phone_data$op_system))
+
+#Numeric Summaries
+#Correlation
+#age, app_usage_time
+phone_data |>
+  summarize(correlation = cor(age, app_usage_time))
+
+#age, app_usage_time grouped by gender and op_system
+phone_data |>
+  group_by(gender, op_system) |>
+  summarize(correlation = cor(age, app_usage_time))
+
+#app_usage_time, no_apps
+phone_data |>
+  summarize(correlation = cor(app_usage_time, no_apps))
+cor(phone_data$app_usage_time, phone_data$no_apps)
+
+# app_usage_time, no_apps, grouped by
+phone_data |>
+  group_by(gender, op_system) |>
+  summarize(correlation = cor(app_usage_time, no_apps))
+
+#age, no_apps
+cor(phone_data$age, phone_data$no_apps)
+
+#age, no_apps, grouped by
+phone_data |>
+  group_by(gender, op_system) |>
+  summarize(correlation = cor(age, no_apps))

@@ -49,7 +49,7 @@ ui <- fluidPage(
                     "Android" = "android"),
         selected = "all"),
       br(),
-        
+      
       #choose first num var
       selectizeInput(
         inputId = "num_var1",
@@ -112,16 +112,51 @@ ui <- fluidPage(
       actionButton(
         inputId = "dataButton",
         label = "Create Specified Dataset",
-#        disabled = TRUE
+        #        disabled = TRUE
       )
-      ),
+    ),
     
     mainPanel(
-      tableOutput("table")
-    )
-    
+      tabsetPanel(
+        tabPanel("About",
+                 tags$img(src = "pexels-luckysam-50614.jpg", width = 250, style = "float:right"),
+                 tags$h3("Purpose"),
+                 ("The purpose of this Shiny app is for the user to explore the Mobile Device Usage and User Behavior Dataset. The exploration includes both numeric and catgorical variables summarized graphically and numerically. The user can also download their selected subset of the data."),
+                 br(),
+                 tags$h3("Data"),
+                 ("The Mobile Device Usage and User Behavior Dataset containes 700 observations related to cell phone usage and behavior. The variables included for exploration in this app are gender (male or female), device operations system (iOS or Android), age of the user (years), daily time spent using apps on the moblie device (minutes), and number of apps installed on the phone. The dataset was created using simulated user behavior."),
+                 br(),
+                 br(),
+                 ("See data source: "),
+                 tags$a("Mobile Device Usage and User Behavior Dataset", href = "https://www.kaggle.com/datasets/valakhorasani/mobile-device-usage-and-user-behavior-dataset/data"),
+                 br(),
+                 tags$h3("Functionality"),
+                 ("The app consists of a sidebar for user inputs to subset the data as well as a main panel with three tabs entitled About, Data Download, and Data Exploration."),
+                 br(),
+                 br(),
+                 tags$b("User Input Sidebar: "),
+                 ("User inputs for subsetting the data are located here. The user can choose to include observations for males, females, iOS operating system, and/or Android operating system. The user can also select one or two numeric variables from the choices of age, daily time spent using apps, and nymber of apps installed. For each of these numeric variables the user can further select the range of values to be included."),
+                 br(),
+                 br(),
+                 tags$b("About Tab: "),
+                 ("This tab contains descriptions of the app and the underlying dataset."),
+                 br(),
+                 br(),
+                 tags$b("Data Download Tab: "),
+                 ("info"),
+                 br(),
+                 br(),
+                 tags$b("Data Exploration Tab: "),
+                 ("info")
+                 ),
+        tabPanel("Data Download",dataTableOutput("table")),
+        tabPanel("Data Exploration")
+      
     )
   )
+    
+  )
+)
 
 
 
@@ -193,55 +228,58 @@ server <- function(input, output, session) {
     }
   })
   
-  # DO i need this?!?!?!
-  #enable action button to create dataset once user has entered preferences
-#  updateActionButton(session, enableDataButton, disabled = FALSE)
   
-  observeEvent(input$dataButton,{
-   
+  data_subset <- reactive({
+    req(input$dataButton)
+    cat_var <- isolate(input$cat_var)
+    num_var1 <- isolate(input$num_var1)
+    num_var2 <- isolate(input$num_var2)
+    nv1_range <- isolate(input$nv1_range)
+    nv2_range <- isolate(input$nv2_range)
+    
     #filter data rows based on user input -----------------------------------------------
     user_data <- phone_data #initialize user_data dataset as a copy of original dataset
     
     #cat vars
     #filter for f or m in gender if only one is chosen
-    if ("female" %in% input$cat_var & !("male" %in% input$cat_var)) {
+    if ("female" %in% cat_var & !("male" %in% cat_var)) {
       user_data <- filter(user_data, gender == "Female")
     }
-    if(!("female" %in% input$cat_var) & "male" %in% input$cat_var) {
+    if(!("female" %in% cat_var) & "male" %in% cat_var) {
       user_data <- filter(user_data, gender == "Male")
     }
     
     #filter for ios or android in op_system if only one is chosen
-    if ("android" %in% input$cat_var & !("ios" %in% input$cat_var)) {
-      user_data <- filter(user_data, op_system == "Female")
+    if ("android" %in% cat_var & !("ios" %in% cat_var)) {
+      user_data <- filter(user_data, op_system == "Android")
     }
-    if(!("female" %in% input$cat_var) & "male" %in% input$cat_var) {
-      user_data <- filter(user_data, gender == "Male")
+    if(!("android" %in% cat_var) & "ios" %in% cat_var) {
+      user_data <- filter(user_data, op_system == "iOS")
     }
     
     #filter num vars
     #filter for age
-    if(input$num_var1 == "age") {
-      user_data <- filter(user_data, age >= input$nv1_range[1] & age <= input$nv1_range[2])
+    if(num_var1 == "age") {
+      user_data <- filter(user_data, age >= nv1_range[1] & age <= nv1_range[2])
     }
-    if(input$num_var2 == "age") {
-      user_data <- filter(user_data, age >= input$nv2_range[1] & age <= input$nv2_range[2])
+    if(num_var2 == "age") {
+      user_data <- filter(user_data, age >= nv2_range[1] & age <= nv2_range[2])
     }
     
     #filter for app_usage_time
-    if(input$num_var1 == "app_usage_time") {
-      user_data <- filter(user_data, app_usage_time >= input$nv1_range[1] & app_usage_time <= input$nv1_range[2])
+    if(num_var1 == "app_usage_time") {
+      user_data <- filter(user_data, app_usage_time >= nv1_range[1] & app_usage_time <= nv1_range[2])
     }
-    if(input$num_var2 == "app_usage_time") {
-      user_data <- filter(user_data, app_usage_time >= input$nv2_range[1] & app_usage_time <= input$nv2_range[2])
+    if(num_var2 == "app_usage_time") {
+      user_data <- filter(user_data, app_usage_time >= nv2_range[1] & app_usage_time <= nv2_range[2])
     }
     
     #filter for no_apps
-    if(input$num_var1 == "no_apps") {
-      user_data <- filter(user_data, no_apps >= input$nv1_range[1] & no_apps <= input$nv1_range[2])
+    if(num_var1 == "no_apps") {
+      user_data <- filter(user_data, no_apps >= nv1_range[1] & no_apps <= nv1_range[2])
     }
-    if(input$num_var2 == "no_apps") {
-      user_data <- filter(user_data, no_apps >= input$nv2_range[1] & no_apps <= input$nv2_range[2])
+    if(num_var2 == "no_apps") {
+      user_data <- filter(user_data, no_apps >= nv2_range[1] & no_apps <= nv2_range[2])
     }
     
     
@@ -250,37 +288,37 @@ server <- function(input, output, session) {
     select_vec <- vector() # initialize vector of column name strings to select columns
     
     #select gender column if either male or female is chosen/add gender to select_vec
-    if("female" %in% input$cat_var | "male" %in% input$cat_var) {
+    if("female" %in% cat_var | "male" %in% cat_var) {
       select_vec <- append(select_vec, "gender")
     }
     
     #select op_system column if either ios or android is chosen/add op_sytem to select_vec
-    if("ios" %in% input$cat_var | "android" %in% input$cat_var) {
+    if("ios" %in% cat_var | "android" %in% cat_var) {
       select_vec <- append(select_vec, "op_system")
     }
     
     #select num var columns
-    if(input$num_var1 == "age" | input$num_var2 == "age") {
+    if(num_var1 == "age" | num_var2 == "age") {
       select_vec <- append(select_vec, "age")
     }
-    if(input$num_var1 == "app_usage_time" | input$num_var2 == "app_usage_time") {
+    if(num_var1 == "app_usage_time" | num_var2 == "app_usage_time") {
       select_vec <- append(select_vec, "app_usage_time")
     }
-    if(input$num_var1 == "no_apps" | input$num_var2 == "no_apps") {
+    if(num_var1 == "no_apps" | num_var2 == "no_apps") {
       select_vec <- append(select_vec, "no_apps")
     }
     
-    user_data <- select(user_data,starts_with(select_vec)) # select columns chosen
+    select(user_data,starts_with(select_vec)) # select columns chosen/final dataset
     
     
-#  })
-  
-  
-  output$table <- renderTable({
-#    req(input$dataButton)
-    user_data
-  })
-  }) 
+      })
+    
+    
+    output$table <- renderDataTable({
+      req(input$dataButton)
+      data_subset()
+    })
+#  }) 
 }
 
 

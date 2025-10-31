@@ -50,6 +50,12 @@ table(phone_data$model, phone_data$user_class)
 table(phone_data$op_system, phone_data$user_class)
 
 # Bar Charts
+# Gender
+ggplot(phone_data, aes(x = gender, fill = gender)) +
+  geom_bar() +
+labs(x = "Gender", y = "Count") +
+  scale_fill_discrete("Gender")
+
 # Operating System by Gender, faceted by user class
 ggplot(phone_data,aes(x = op_system, fill = gender)) +
   geom_bar(position = "dodge") +

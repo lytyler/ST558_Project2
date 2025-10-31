@@ -150,17 +150,88 @@ ui <- fluidPage(
                  ("info")
                  ),
         tabPanel("Data Download",dataTableOutput("table")),
-        tabPanel("Data Exploration")
-      
+        tabPanel("Data Exploration",
+                 br(),
+                 tags$b("First, specify and create dataset in sidebar."),
+                 br(),
+                 br(),
+                 selectizeInput(
+                   inputId = "summary_type",
+                   label = "Choose Type of Data Summary to Display:",
+                   choices = c("Choose One" = "",
+                               "Categorical Variables" = "cat_var_sum",
+                               "Grouped Categorical Variables" = "gr_cat_var_sum",
+                               "Numeric Variables" = "num_var_sum",
+                               "Grouped Numeric Variables" = "gr_num_var_sum",
+                               "Numeric Variable Relationships" = "rel_num_var_sum"
+                               )
+                 ),
+                 br(),
+                 #if "categorical variables" summary is selected:
+                 conditionalPanel(
+                   condition = "input.summary_type == 'cat_var_sum'",
+                   fluidRow(
+                     column(width = 6,
+                            plotOutput("bar_chart_gender")
+                            ),
+                     column(width = 6,
+                            tableOutput("c_table_gender")
+                            )
+                   ),
+                   br(),
+                   br(),
+                   fluidRow(
+                     column(width = 6,
+                            plotOutput("bar_chart_op_system")
+                     ),
+                     column(width = 6,
+                            tableOutput("c_table_op_system")
+                     )
+                   )
+                 ),
+                 #if "numerical variables" summary is selected:
+                 conditionalPanel(
+                   condition = "input.summary_type == 'num_var_sum'",
+                   fluidRow(
+                     column(width = 6,
+                            plotOutput("hist_age")
+                     ),
+                     column(width = 6,
+                            tableOutput("summary_age")
+                     )
+                   ),
+                   br(),
+                   br(),
+                   fluidRow(
+                     column(width = 6,
+                            plotOutput("hist_app_usage_time")
+                     ),
+                     column(width = 6,
+                            tableOutput("summary_app_usage_time")
+                     )
+                   ),
+                   br(),
+                   br(),
+                   fluidRow(
+                     column(width = 6,
+                            plotOutput("hist_no_apps")
+                     ),
+                     column(width = 6,
+                            tableOutput("summary_no_apps")
+                     )
+                   )
+                 )
+                
     )
   )
     
   )
 )
-
+)
 
 
 # Define server logic -----------------------------------------------------------
+#--------------------------------------------------------------------------------
 server <- function(input, output, session) {
   
   #choose second num var
@@ -169,7 +240,7 @@ server <- function(input, output, session) {
     if (input$num_var1 == "age") {
       selectizeInput(
         inputId = "num_var2",
-        label = "Choose Another Measurement:",
+        label = "Choose Another Measurement (Optional):",
         choices = c("Choose One" = "",
                     "App Usage Time (min/day)" = "app_usage_time",
                     "Number of Apps Installed" = "no_apps"),
@@ -178,7 +249,7 @@ server <- function(input, output, session) {
     } else if (input$num_var1 == "app_usage_time") {
       selectizeInput(
         inputId = "num_var2",
-        label = "Choose Another Measurement:",
+        label = "Choose Another Measurement (Optional):",
         choices = c("Choose One" = "",
                     "Age" = "age",
                     "Number of Apps Installed" = "no_apps"),
@@ -187,7 +258,7 @@ server <- function(input, output, session) {
     } else if (input$num_var1 == "no_apps") {
       selectizeInput(
         inputId = "num_var2",
-        label = "Choose Another Measurement:",
+        label = "Choose Another Measurement (Optional):",
         choices = c("Choose One" = "",
                     "Age" = "age",
                     "App Usage Time (min/day)" = "app_usage_time"),
@@ -318,10 +389,102 @@ server <- function(input, output, session) {
       req(input$dataButton)
       data_subset()
     })
-#  }) 
+    
+    #Data Exploration Tab Outputs ------------------------------------------------
+    # Categorical Variables
+    output$bar_chart_gender <- renderPlot({
+      user_data <- data_subset()
+      if ("gender" %in% colnames(user_data)) {
+      ggplot(user_data, aes(x = gender, fill = gender)) +
+        geom_bar() +
+        labs(x = "Gender", y = "Count", title = "Mobile Device User Gender") +
+        scale_fill_discrete("Gender")
+      }
+    })
+    
+    output$c_table_gender <- renderTable({
+      user_data <- data_subset()
+      if ("gender" %in% colnames(user_data)) {
+      user_data |>
+        group_by(gender) |>
+        summarize(count = n())
+      }
+    })
+    
+    output$bar_chart_op_system <- renderPlot({
+      user_data <- data_subset()
+      if ("op_system" %in% colnames(user_data)) {
+      ggplot(user_data, aes(x = op_system, fill = op_system)) +
+        geom_bar() +
+        labs(x = "Operating System", y = "Count", title = "Mobile Device Operating System") +
+        scale_fill_discrete("Operating System")
+      }
+    })
+    
+    output$c_table_op_system <- renderTable({
+      user_data <- data_subset()
+      if ("op_system" %in% colnames(user_data)) {
+      user_data |>
+        group_by(op_system) |>
+        summarize(count = n())
+      }
+    })
+    
+    # Numeric Variables
+    output$hist_age <- renderPlot({
+      user_data <- data_subset()
+      if ("age" %in% colnames(user_data)) {
+        ggplot(user_data, aes(x = age)) +
+          geom_density() +
+          labs(x = "Age", title = "Mobile Device User Age")
+      }
+    })
+    
+    output$summary_age <- renderTable({
+      user_data <- data_subset()
+      if ("age" %in% colnames(user_data)) {
+        user_data |>
+          summarize("Mean Age" = mean(age), "SD Age" = sd(age), "Median Age" = median(age))
+      }
+    })
+    
+    output$hist_app_usage_time <- renderPlot({
+      user_data <- data_subset()
+      if ("app_usage_time" %in% colnames(user_data)) {
+        ggplot(user_data, aes(x = app_usage_time)) +
+          geom_density() +
+          labs(x = "App Usage Time (min/day)", title = "App Usage Time")
+      }
+    })
+    
+    output$summary_app_usage_time <- renderTable({
+      user_data <- data_subset()
+      if ("app_usage_time" %in% colnames(user_data)) {
+        user_data |>
+          summarize("Mean Usage Time" = mean(app_usage_time), "SD Usage Time" = sd(app_usage_time), "Median Usage Time" = median(app_usage_time))
+      }
+    })
+    
+    output$hist_no_apps <- renderPlot({
+      user_data <- data_subset()
+      if ("no_apps" %in% colnames(user_data)) {
+        ggplot(user_data, aes(x = no_apps)) +
+          geom_density() +
+          labs(x = "Number of Apps", title = "Number of Apps on Mobile Device")
+      }
+    })
+    
+    output$summary_no_apps <- renderTable({
+      user_data <- data_subset()
+      if ("no_apps" %in% colnames(user_data)) {
+        user_data |>
+          summarize("Mean No. Apps" = mean(no_apps), "SD No. Apps" = sd(no_apps), "Median No. Apps" = median(no_apps))
+      }
+    })
 }
 
 
 
 #Create shiny app ----------------------------------------------------------------
+#---------------------------------------------------------------------------------
 shinyApp(ui = ui, server = server)

@@ -170,64 +170,67 @@ ui <- fluidPage(
                  #if "categorical variables" summary is selected:
                  conditionalPanel(
                    condition = "input.summary_type == 'cat_var_sum'",
-                   fluidRow(
-                     column(width = 6,
-                            plotOutput("bar_chart_gender")
-                            ),
-                     column(width = 6,
-                            tableOutput("c_table_gender")
-                            )
+                   selectizeInput(
+                     inputId = "single_cv",
+                     label = "Choose Categorical Variable to Summarize:",
+                     choices = c("Choose One" = "",
+                                 "Gender" = "gender", 
+                                 "Operating System" = "op_system")
                    ),
-                   br(),
-                   br(),
-                   fluidRow(
-                     column(width = 6,
-                            plotOutput("bar_chart_op_system")
-                     ),
-                     column(width = 6,
-                            tableOutput("c_table_op_system")
-                     )
+                   column(width = 6,
+                          plotOutput("plot_single_cv")
+                   ),
+                   column(width = 6,
+                          br(),
+                          br(),
+                          tableOutput("table_single_cv")
+                   )
+                 ),
+                 #if "grouped categorical variable" is selected
+                 conditionalPanel(
+                   condition = "input.summary_type == 'gr_cat_var_sum'",
+                   selectizeInput(
+                     inputId = "gr_cv",
+                     label = "Choose Categorical Variable to Summarize by Group:",
+                     choices = c("Choose One" = "",
+                                 "Gender, Grouped by Operating System" = "gender",
+                                 "Operating System, Grouped by Gender" = "op_system")
+                   ),
+                   column(width = 6,
+                          plotOutput("plot_gr_cv")
+                   ),
+                   column(width = 6,
+                          br(),
+                          br(),
+                          tableOutput("table_gr_cv")
                    )
                  ),
                  #if "numerical variables" summary is selected:
                  conditionalPanel(
                    condition = "input.summary_type == 'num_var_sum'",
                    fluidRow(
-                     column(width = 6,
-                            plotOutput("hist_age")
+                     selectizeInput(
+                       inputId = "single_nv",
+                       label = "Choose numeric variable to summarize:",
+                       choices = c("Choose One" = "",
+                                    "Age" = "age", 
+                                   "App Usage Time (min/day)" = "app_usage_time",
+                                   "Number of Apps Installed" = "no_apps"),
                      ),
                      column(width = 6,
-                            tableOutput("summary_age")
-                     )
-                   ),
-                   br(),
-                   br(),
-                   fluidRow(
-                     column(width = 6,
-                            plotOutput("hist_app_usage_time")
+                            plotOutput("plot_single_nv")
                      ),
                      column(width = 6,
-                            tableOutput("summary_app_usage_time")
-                     )
-                   ),
-                   br(),
-                   br(),
-                   fluidRow(
-                     column(width = 6,
-                            plotOutput("hist_no_apps")
-                     ),
-                     column(width = 6,
-                            tableOutput("summary_no_apps")
+                            tableOutput("table_single_nv")
                      )
                    )
-                 )
                 
-    )
-  )
-    
-  )
-)
-)
+                 ) # closes conditionalPanel for single numvar data summary
+        ) #closes tabPanel for data exploration
+      ) # closes tabsetPanel
+    ) #closes mainPanel
+  ) #closes sidebarLayout
+) #closes fluidPage
 
 
 # Define server logic -----------------------------------------------------------
@@ -392,96 +395,99 @@ server <- function(input, output, session) {
     
     #Data Exploration Tab Outputs ------------------------------------------------
     # Categorical Variables
-    output$bar_chart_gender <- renderPlot({
+    #Single Categorical Variables
+    #bar chart
+    output$plot_single_cv <- renderPlot({
+      req(input$single_cv)
       user_data <- data_subset()
-      if ("gender" %in% colnames(user_data)) {
-      ggplot(user_data, aes(x = gender, fill = gender)) +
+      validate(
+        need(input$single_cv %in% colnames(user_data),"Please choose a categorical variable that is included in the user-specified dataset, or go to the sidebar to create another dataset that includes the desired categorical variable.")
+      )
+      xaxis <- as.character(input$single_cv)
+      ggplot(user_data, aes_string(x = xaxis, fill = xaxis)) +
         geom_bar() +
-        labs(x = "Gender", y = "Count", title = "Mobile Device User Gender") +
-        scale_fill_discrete("Gender")
-      }
+        labs(x = var_label(user_data[input$single_cv]),
+             y = "Count",
+             title = paste("Bar Chart:", var_label(user_data[input$single_cv]))
+        )
     })
     
-    output$c_table_gender <- renderTable({
+    #one way contingency table
+    output$table_single_cv <- renderTable({
+      req(input$single_cv)
       user_data <- data_subset()
-      if ("gender" %in% colnames(user_data)) {
+      validate(
+        need(input$single_cv %in% colnames(user_data),"")
+      )
       user_data |>
-        group_by(gender) |>
+        group_by(user_data[[input$single_cv]]) |>
         summarize(count = n())
-      }
+    }, colnames = FALSE)
+    
+    #grouped categorical variables
+    #side-by-side bar chart
+    output$plot_gr_cv  <- renderPlot({
+      req(input$gr_cv)
+      user_data <- data_subset()
+      validate(
+        need("gender" %in% colnames(user_data) & "op_system" %in% colnames(user_data),
+             "Please go to the sidebar to specify and create a dataset with female, male or both, and iOS, Android or both for grouped summaries of categorical variables.")
+      )
+      xaxis <- as.character(input$gr_cv)
+      if (input$gr_cv == "gender") fill_var <- as.character("op_system")
+      if (input$gr_cv == "op_system") fill_var <- as.character("gender")
+      ggplot(user_data,aes_string(x = xaxis, fill = fill_var)) +
+        geom_bar(position = "dodge") +
+        labs(x = var_label(user_data[input$gr_cv]),
+             title = paste("Bar Chart:", var_label(user_data[input$gr_cv]), "Grouped by", var_label(user_data[fill_var]))
+        )
     })
     
-    output$bar_chart_op_system <- renderPlot({
+    #two way contingency table
+    output$table_gr_cv <- renderTable({
+      req(input$gr_cv)
       user_data <- data_subset()
-      if ("op_system" %in% colnames(user_data)) {
-      ggplot(user_data, aes(x = op_system, fill = op_system)) +
-        geom_bar() +
-        labs(x = "Operating System", y = "Count", title = "Mobile Device Operating System") +
-        scale_fill_discrete("Operating System")
-      }
-    })
-    
-    output$c_table_op_system <- renderTable({
-      user_data <- data_subset()
-      if ("op_system" %in% colnames(user_data)) {
+      validate(
+        need("gender" %in% colnames(user_data) & "op_system" %in% colnames(user_data),"")
+      )
+      if (input$gr_cv == "gender") gr2 <- as.character("op_system")
+      if (input$gr_cv == "op_system") gr2 <- as.character("gender")
       user_data |>
-        group_by(op_system) |>
-        summarize(count = n())
-      }
+        group_by(user_data[input$gr_cv], user_data[gr2]) |>
+        summarize(count = n()) #|>
+#        pivot_wider(names_from = user_data[gr2], values_from = count)
+    }, colnames = FALSE)
+    
+    # Single Numeric Variables
+    output$plot_single_nv <- renderPlot({
+      req(input$single_nv)
+      user_data <- data_subset()
+      validate(
+        need(input$single_nv %in% colnames(user_data),"Please choose a numeric variable that is included in the user-specified dataset, or go to the sidebar to create another dataset that includes the desired numeric variable.")
+      )
+      xaxis <- as.character(input$single_nv)
+      ggplot(user_data, aes_string(x = xaxis)) +
+        geom_density() +
+        labs(x = var_label(user_data[input$single_nv]),
+             y = "Density",
+             title = paste("Density Plot:", var_label(user_data[input$single_nv]))
+        )
     })
     
-    # Numeric Variables
-    output$hist_age <- renderPlot({
+    output$table_single_nv <- renderTable({
+      req(input$single_nv)
       user_data <- data_subset()
-      if ("age" %in% colnames(user_data)) {
-        ggplot(user_data, aes(x = age)) +
-          geom_density() +
-          labs(x = "Age", title = "Mobile Device User Age")
-      }
+      validate(
+        need(input$single_nv %in% colnames(user_data),"")
+        )
+      user_data |>
+        summarize("Mean" = mean(user_data[[input$single_nv]]),
+                  "SD" = sd(user_data[[input$single_nv]]),
+                  "Median" = median(user_data[[input$single_nv]])
+                  )
     })
-    
-    output$summary_age <- renderTable({
-      user_data <- data_subset()
-      if ("age" %in% colnames(user_data)) {
-        user_data |>
-          summarize("Mean Age" = mean(age), "SD Age" = sd(age), "Median Age" = median(age))
-      }
-    })
-    
-    output$hist_app_usage_time <- renderPlot({
-      user_data <- data_subset()
-      if ("app_usage_time" %in% colnames(user_data)) {
-        ggplot(user_data, aes(x = app_usage_time)) +
-          geom_density() +
-          labs(x = "App Usage Time (min/day)", title = "App Usage Time")
-      }
-    })
-    
-    output$summary_app_usage_time <- renderTable({
-      user_data <- data_subset()
-      if ("app_usage_time" %in% colnames(user_data)) {
-        user_data |>
-          summarize("Mean Usage Time" = mean(app_usage_time), "SD Usage Time" = sd(app_usage_time), "Median Usage Time" = median(app_usage_time))
-      }
-    })
-    
-    output$hist_no_apps <- renderPlot({
-      user_data <- data_subset()
-      if ("no_apps" %in% colnames(user_data)) {
-        ggplot(user_data, aes(x = no_apps)) +
-          geom_density() +
-          labs(x = "Number of Apps", title = "Number of Apps on Mobile Device")
-      }
-    })
-    
-    output$summary_no_apps <- renderTable({
-      user_data <- data_subset()
-      if ("no_apps" %in% colnames(user_data)) {
-        user_data |>
-          summarize("Mean No. Apps" = mean(no_apps), "SD No. Apps" = sd(no_apps), "Median No. Apps" = median(no_apps))
-      }
-    })
-}
+
+} #final bracket of server section
 
 
 

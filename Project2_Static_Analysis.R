@@ -43,7 +43,7 @@ phone_data |>
   summarize(count = n())
 
 # Two Way
-table(phone_data$model, phone_data$gender) #leave this one off?
+table(phone_data$model, phone_data$gender)
 table(phone_data$op_system, phone_data$gender)
 table(phone_data$user_class, phone_data$gender)
 table(phone_data$model, phone_data$user_class)
@@ -103,6 +103,11 @@ phone_data |>
 summarize("mean_app_usage_time" = mean(app_usage_time), "sd_app_usage_time" = sd(app_usage_time), "median_app_usage_time" = median(app_usage_time))
 
 #gender
+
+phone_data |>
+  group_by(gender) |>
+  summarize("mean_age" = mean(age), "sd_age" = sd(age), "median_age" = median(age))
+
 phone_data |>
   group_by(gender) |>
   summarize("mean_app_usage_time" = mean(app_usage_time), "sd_app_usage_time" = sd(app_usage_time), "median_app_usage_time" = median(app_usage_time))
@@ -186,3 +191,49 @@ cor(phone_data$age, phone_data$no_apps)
 phone_data |>
   group_by(gender, op_system) |>
   summarize(correlation = cor(age, no_apps))
+
+
+#Graphical Summaries
+#Grouped Box Plots
+#age by gender
+ggplot(phone_data, aes(x = gender, y = age, fill = gender)) +
+  geom_boxplot() +
+  labs(x = "Gender", y = "Age", title = "Boxplot: Age by Gender") +
+  theme(legend.position = "none")
+
+#age by op_system
+ggplot(phone_data, aes(x = op_system, y = age, fill = op_system)) +
+  geom_boxplot() +
+  labs(x = "Operating System", y = "Age", title = "Boxplot: Age by Operating System") +
+  theme(legend.position = "none")
+
+#app_usage_time by gender
+ggplot(phone_data, aes(x = gender, y = app_usage_time, fill = gender)) +
+  geom_boxplot() +
+  labs(x = "Gender", y = "App Usage Time (min/day)", title = "Boxplot: App Usage Time by Gender") +
+  theme(legend.position = "none")
+
+#app_usage_time by op_system
+ggplot(phone_data, aes(x = op_system, y = app_usage_time, fill = op_system)) +
+  geom_boxplot() +
+  labs(x = "Operating System", y = "App Usage Time (min/day)", title = "Boxplot: App Usage Time by Operating System") +
+  theme(legend.position = "none")
+
+#no_apps by gender
+ggplot(phone_data, aes(x = gender, y = no_apps, fill = gender)) +
+  geom_boxplot() +
+  labs(x = "Gender", y = "Number of Apps Installed", title = "Boxplot: Number of Apps Installed by Gender") +
+  theme(legend.position = "none")
+
+#no_apps by op_system
+ggplot(phone_data, aes(x = op_system, y = no_apps, fill = op_system)) +
+  geom_boxplot() +
+  labs(x = "Operating System", y = "Number of Apps Installed", title = "Boxplot: Number of Apps Installed by Operating System") +
+  theme(legend.position = "none")
+
+#Faceted Grouped Boxplot
+ggplot(phone_data, aes(x = op_system, y = no_apps, fill = op_system)) +
+  geom_boxplot() +
+  labs(x = "Operating System", y = "Number of Apps Installed", title = "Boxplot: Number of Apps Installed by Operating System") +
+  theme(legend.position = "none") +
+  facet_wrap(~gender)

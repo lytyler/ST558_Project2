@@ -208,24 +208,56 @@ ui <- fluidPage(
                  #if "numerical variables" summary is selected:
                  conditionalPanel(
                    condition = "input.summary_type == 'num_var_sum'",
-                   fluidRow(
-                     selectizeInput(
-                       inputId = "single_nv",
-                       label = "Choose numeric variable to summarize:",
-                       choices = c("Choose One" = "",
-                                    "Age" = "age", 
-                                   "App Usage Time (min/day)" = "app_usage_time",
-                                   "Number of Apps Installed" = "no_apps"),
-                     ),
-                     column(width = 6,
-                            plotOutput("plot_single_nv")
-                     ),
-                     column(width = 6,
-                            tableOutput("table_single_nv")
-                     )
+                   selectizeInput(
+                    inputId = "single_nv",
+                    label = "Choose numeric variable to summarize:",
+                    choices = c("Choose One" = "",
+                                "Age" = "age", 
+                                "App Usage Time (min/day)" = "app_usage_time",
+                                "Number of Apps Installed" = "no_apps"),
+                   ),
+                   column(width = 6,
+                          plotOutput("plot_single_nv")
+                   ),
+                   column(width = 6,
+                          br(),
+                          br(),
+                          tableOutput("table_single_nv")
                    )
                 
-                 ) # closes conditionalPanel for single numvar data summary
+                 ), # closes conditionalPanel for single numvar data summary
+                 #if "grouped numerical variables" summary is selected:
+                 conditionalPanel(
+                   condition = "input.summary_type == 'gr_num_var_sum'",
+                   selectizeInput(
+                     inputId = "gr_nv_nv",
+                     label = "Choose numeric variable to summarize:",
+                     choices = c("Choose One" = "",
+                                 "Age" = "age", 
+                                 "App Usage Time (min/day)" = "app_usage_time",
+                                 "Number of Apps Installed" = "no_apps"),
+                   ),
+                   br(),
+                   #choose grouping variable
+                   selectizeInput(
+                     inputId = "gr_nv_gr",
+                     label = "Choose grouping variable:",
+                     choices = c("Choose One" = "",
+                                 "Gender" = "gender", 
+                                 "Operating System" = "op_system"
+                                 )
+                   ),
+                   #add faceting checkbox for other grouping var here?
+                   column(width = 6,
+                         plotOutput("plot_gr_nv")
+                   ),
+                   column(width = 6,
+                          br(),
+                          br(),
+                          tableOutput("table_gr_nv")
+                   )
+                   
+                 ) # closes conditionalPanel for grouped numvar data summary
         ) #closes tabPanel for data exploration
       ) # closes tabsetPanel
     ) #closes mainPanel
@@ -409,7 +441,8 @@ server <- function(input, output, session) {
         labs(x = var_label(user_data[input$single_cv]),
              y = "Count",
              title = paste("Bar Chart:", var_label(user_data[input$single_cv]))
-        )
+        ) +
+        theme(legend.position = "none")
     })
     
     #one way contingency table
@@ -485,6 +518,42 @@ server <- function(input, output, session) {
                   "SD" = sd(user_data[[input$single_nv]]),
                   "Median" = median(user_data[[input$single_nv]])
                   )
+    })
+    
+    #Grouped Numeric Variables
+    #grouped boxplots of numeric variables
+    output$plot_gr_nv <- renderPlot({
+      req(input$gr_nv_gr, input$gr_nv_nv)
+      user_data <-data_subset()
+      validate(
+        need(input$gr_nv_nv %in% colnames(user_data) & input$gr_nv_gr %in% colnames(user_data),
+             "Please choose a numeric variable and a grouping variable that are included in the user-specified dataset, or go to the sidebar to create another dataset that includes the desired variables.")
+      )
+      xaxis <- as.character(input$gr_nv_gr)
+      yaxis <- as.character(input$gr_nv_nv)
+      ggplot(user_data, aes_string(x = xaxis, y = yaxis, fill = xaxis)) +
+        geom_boxplot() +
+        labs(x = var_label(user_data[input$gr_nv_gr]), 
+             y = var_label(user_data[input$gr_nv_nv]), 
+             title = paste("Boxplot:", var_label(user_data[input$gr_nv_nv]), 
+             "by", var_label(user_data[input$gr_nv_gr]))
+        ) +
+        theme(legend.position = "none")
+    })
+    
+    #numeric summaries of grouped numeric variables
+    output$table_gr_nv <- renderTable({
+      req(input$gr_nv_gr, input$gr_nv_nv)
+      user_data <- data_subset()
+      validate(
+        need(input$gr_nv_nv %in% colnames(user_data) & input$gr_nv_gr %in% colnames(user_data),"")
+      )
+      user_data |>
+        group_by( !!sym(input$gr_nv_gr)) |>
+        summarize("Mean" = mean(get(input$gr_nv_nv)),
+                  "SD" = sd(get(input$gr_nv_nv)),
+                  "Median" = median(get(input$gr_nv_nv))
+        )
     })
 
 } #final bracket of server section

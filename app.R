@@ -149,7 +149,12 @@ ui <- fluidPage(
                  tags$b("Data Exploration Tab: "),
                  ("info")
                  ),
-        tabPanel("Data Download",dataTableOutput("table")),
+        tabPanel("Data Download",
+                 dataTableOutput("table"),
+                 br(),
+                 br(),
+                 downloadButton("download","Download Data")
+                 ),
         tabPanel("Data Exploration",
                  br(),
                  tags$b("First, specify and create dataset in sidebar."),
@@ -247,7 +252,6 @@ ui <- fluidPage(
                                  "Operating System" = "op_system"
                                  )
                    ),
-                   #add faceting checkbox for other grouping var here?
                    column(width = 6,
                          plotOutput("plot_gr_nv")
                    ),
@@ -257,7 +261,41 @@ ui <- fluidPage(
                           tableOutput("table_gr_nv")
                    )
                    
-                 ) # closes conditionalPanel for grouped numvar data summary
+                 ), # closes conditionalPanel for grouped numvar data summary
+                 # if numeric variable relationship is selected
+                 conditionalPanel(
+                   condition = "input.summary_type == 'rel_num_var_sum'",
+                   column(
+                     width = 5,
+                          selectizeInput(
+                              inputId = "nv_nv_nv1",
+                              label = "Choose first numeric variable to summarize:",
+                              choices = c("Choose One" = "",
+                                          "Age" = "age", 
+                                          "App Usage Time (min/day)" = "app_usage_time",
+                                          "Number of Apps Installed" = "no_apps"),
+                          ),
+                          br(),
+                          #select second numvar for scatter plot and correlation
+                          uiOutput("scPlot_nv2_selector"),
+                          br(),
+                          #select catvar for grouping
+                          selectizeInput(
+                            inputId = "scPlot_gr_cv",
+                            label = "Choose categorical variable for grouping:",
+                            choices = c("Choose One" = "",
+                                 "Gender" = "gender", 
+                                 "Operating System" = "op_system"
+                            )
+                          ),
+                          br(),
+                          #select catvar for faceting
+                          uiOutput("scPlot_cv_faceting_selector"),
+                   ),
+                   column(width = 7,
+                          plotOutput("plot_nv_nv")
+                          )
+                 ) #closes condiontal panel for numeric variable rel summary
         ) #closes tabPanel for data exploration
       ) # closes tabsetPanel
     ) #closes mainPanel
@@ -269,7 +307,7 @@ ui <- fluidPage(
 #--------------------------------------------------------------------------------
 server <- function(input, output, session) {
   
-  #choose second num var
+  #choose second num var in sidebar
   
   output$num_selector2 <- renderUI({
     if (input$num_var1 == "age") {
@@ -312,8 +350,7 @@ server <- function(input, output, session) {
         label = "Select Age Range:",
         min = 18,
         max = 59,
-        value = c(18, 59),
-        step = 1
+        value = c(18, 59)
       )
     } else if (input$num_var2 == "app_usage_time") {
       sliderInput(
@@ -359,32 +396,26 @@ server <- function(input, output, session) {
     if ("android" %in% cat_var & !("ios" %in% cat_var)) {
       user_data <- filter(user_data, op_system == "Android")
     }
-    if(!("android" %in% cat_var) & "ios" %in% cat_var) {
+    if (!("android" %in% cat_var) & "ios" %in% cat_var) {
       user_data <- filter(user_data, op_system == "iOS")
     }
     
     #filter num vars
-    #filter for age
-    if(num_var1 == "age") {
+    #filter num_var1
+    if (num_var1 == "age") {
       user_data <- filter(user_data, age >= nv1_range[1] & age <= nv1_range[2])
-    }
-    if(num_var2 == "age") {
-      user_data <- filter(user_data, age >= nv2_range[1] & age <= nv2_range[2])
-    }
-    
-    #filter for app_usage_time
-    if(num_var1 == "app_usage_time") {
+    } else if (num_var1 == "app_usage_time") {
       user_data <- filter(user_data, app_usage_time >= nv1_range[1] & app_usage_time <= nv1_range[2])
-    }
-    if(num_var2 == "app_usage_time") {
-      user_data <- filter(user_data, app_usage_time >= nv2_range[1] & app_usage_time <= nv2_range[2])
-    }
-    
-    #filter for no_apps
-    if(num_var1 == "no_apps") {
+    } else if (num_var1 == "no_apps") {
       user_data <- filter(user_data, no_apps >= nv1_range[1] & no_apps <= nv1_range[2])
     }
-    if(num_var2 == "no_apps") {
+    
+    #filter num_var2
+    if (num_var2 == "age") {
+      user_data <- filter(user_data, age >= nv2_range[1] & age <= nv2_range[2])
+    } else if (num_var2 == "app_usage_time") {
+      user_data <- filter(user_data, app_usage_time >= nv2_range[1] & app_usage_time <= nv2_range[2])
+    } else if (num_var2 == "no_apps") {
       user_data <- filter(user_data, no_apps >= nv2_range[1] & no_apps <= nv2_range[2])
     }
     
@@ -419,12 +450,21 @@ server <- function(input, output, session) {
     
       })
     
-    
-    output$table <- renderDataTable({
-      req(input$dataButton)
-      data_subset()
-    })
-    
+    #Outputs for Data Download Tab------------------------------------------------
+  output$table <- renderDataTable({
+    req(input$dataButton)
+    data_subset()
+  })
+  
+  output$download <- downloadHandler(
+    filename = function() {
+      paste("data-", Sys.Date(), ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(data_subset(),file)
+      }
+  )
+  
     #Data Exploration Tab Outputs ------------------------------------------------
     # Categorical Variables
     #Single Categorical Variables
@@ -555,6 +595,104 @@ server <- function(input, output, session) {
                   "Median" = median(get(input$gr_nv_nv))
         )
     })
+    
+    #Relate two numeric variables/Numeric Variable Relationships
+    
+    #Select second numvar for plot and summary
+    output$scPlot_nv2_selector <- renderUI({
+      req(input$nv_nv_nv1)
+      if (input$nv_nv_nv1 == "age") {
+        selectizeInput(
+          inputId = "nv_nv_nv2",
+          label = "Choose Second Numeric Variable to Summarize:",
+          choices = c("Choose One" = "",
+                      "App Usage Time (min/day)" = "app_usage_time",
+                      "Number of Apps Installed" = "no_apps"),
+          selected = NULL
+        )
+      } else if (input$nv_nv_nv1 == "app_usage_time") {
+        selectizeInput(
+          inputId = "nv_nv_nv2",
+          label = "Choose Second Numeric Variable to Summarize:",
+          choices = c("Choose One" = "",
+                      "Age" = "age",
+                      "Number of Apps Installed" = "no_apps"),
+          selected = NULL
+        )
+      } else if (input$nv_nv_nv1 == "no_apps") {
+        selectizeInput(
+          inputId = "nv_nv_nv2",
+          label = "Choose Second Numeric Variable to Summarize:",
+          choices = c("Choose One" = "",
+                      "Age" = "age",
+                      "App Usage Time (min/day)" = "app_usage_time"),
+          selected = NULL
+        )
+      }
+    })
+    
+    #Select catvar for faceting (second catvar for this plotting/summary instance)
+    output$scPlot_cv_faceting_selector <- renderUI({
+      req(input$scPlot_gr_cv)
+      if (input$scPlot_gr_cv == "gender") {
+        selectizeInput(
+          inputId = "scPlot_cv_facet",
+          label = "Choose Categorical Variable for Faceting:",
+          choices = c("Choose One" = "",
+                      "Operating System" = "op_system",
+                      "Place Holder" = "placeholder"),
+          selected = NULL
+        )
+      } else if (input$scPlot_gr_cv == "op_system") {
+        selectizeInput(
+          inputId = "scPlot_cv_facet",
+          label = "Choose Categorical Variable for Faceting:",
+          choices = c("Choose One" = "",
+                      "Gender" = "gender",
+                      "Place Holder" = "placeholder"),
+          selected = NULL
+        )
+      }
+    })
+    
+    #Plot
+    #graphical summaries of graphical numeric variables
+    output$plot_nv_nv <- renderPlot({
+      req(input$nv_nv_nv1, input$nv_nv_nv2,input$scPlot_gr_cv)
+      user_data <- data_subset()
+      validate(
+        need(input$nv_nv_nv1 %in% colnames(user_data) & input$nv_nv_nv1 %in% colnames(user_data),
+             "Please choose two numeric variables that are included in the user-specified dataset, or go to the sidebar to create another dataset that includes the desired variables.")
+      )
+      ggplot(user_data, aes_string(x = input$nv_nv_nv1, 
+                                   y = input$nv_nv_nv2,
+                                   color = input$scPlot_gr_cv)) +
+        geom_point() +
+        geom_smooth(method = lm) +
+        labs(x = var_label(user_data[input$nv_nv_nv1]), 
+             y = var_label(user_data[input$nv_nv_nv2]),
+             title = paste("Scatter Plot:", var_label(user_data[input$nv_nv_nv2]), 
+                           "by", var_label(user_data[input$nv_nv_nv1]))
+        ) +
+        facet_wrap(~get(input$scPlot_cv_facet))
+    })
+    
+    #Table
+    #numeric summaries of grouped numeric variables
+    #need to update still copied and pasted from elsewhere
+    # output$table_nv_nv <- renderTable({
+    #   req(input$nv_nv_nv1, input$nv_nv_nv2, input$scPlot_gr_cv, input$scPlot_cv_facet)
+    #   user_data <- data_subset()
+    #   validate(
+    #     need(input$gr_nv_nv %in% colnames(user_data) & input$gr_nv_gr %in% colnames(user_data),"")
+    #   )
+    #   user_data |>
+    #     group_by( !!sym(input$gr_nv_gr)) |>
+    #     summarize("Mean" = mean(get(input$gr_nv_nv)),
+    #               "SD" = sd(get(input$gr_nv_nv)),
+    #               "Median" = median(get(input$gr_nv_nv))
+    #     )
+    # })
 
 } #final bracket of server section
 

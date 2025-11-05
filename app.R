@@ -133,7 +133,7 @@ ui <- fluidPage(
                  br(),
                  br(),
                  tags$b("User Input Sidebar: "),
-                 ("User inputs for subsetting the data are located here. The user can choose to include observations for males, females, iOS operating system, and/or Android operating system. If no subsetting of these categories is desired, choose all four. The user can also select one or two numeric variables from the choices of age, daily time spent using apps, and number of apps installed. An option for the first numerical variable must be selected. For each of these numeric variables the user can further select the range of values to be included. If the range values on the slider(s) are left at the default setting(s), no filtering occurs. After making these selections, the user generates the subsetted dataset by pressing the Create/Update Dataset Button."),
+                 ("User inputs for subsetting the data are located here. The user can choose to include observations for males, females, iOS operating system, and/or Android operating system. The user can also select one or two numeric variables from the choices of age, daily time spent using apps, and number of apps installed. For each of these numeric variables the user can further select the range of values to be included. If the range values on the slider(s) are left at the default setting(s), no filtering occurs for these numeric variables. After making these selections, the user generates the subsetted dataset by pressing the Create/Update Dataset Button."),
                  br(),
                  br(),
                  tags$b("About Tab: "),
@@ -145,7 +145,7 @@ ui <- fluidPage(
                  br(),
                  br(),
                  tags$b("Data Exploration Tab: "),
-                 ("After creating/updating the dataset in the sidebar, the user can explore the dataset in this tab. The user must choose the type of data summary to display (categorical variables, grouped categorical variables, numeric variables, grouped numeric variables, relationships between numeric variables, and fun with beeswarm plots). For each data summary type, the user will be further prompted to choose relevant variables for the summary."),
+                 ("After creating/updating the dataset in the sidebar, the user can explore the dataset in this tab. The user must choose the type of data summary to display (categorical variables, grouped categorical variables, numeric variables, grouped numeric variables, relationships between numeric variables, or fun with beeswarm plots). For each data summary type, the user will be prompted to choose relevant variables, and must then click the Create/Update Plot button to see the summary."),
                  br(),
                  br(),
                  br(),
@@ -156,7 +156,7 @@ ui <- fluidPage(
                  dataTableOutput("table"),
                  br(),
                  br(),
-                 ("After dataset is created/updated and data table is visible above, click Download Data button to download .csv file of dataset."),
+                 ("After dataset is created/updated in the sidebar and data table is visible above, click Download Data button to download .csv file of dataset."),
                  br(),
                  br(),
                  downloadButton("download","Download Data"),
@@ -169,9 +169,6 @@ ui <- fluidPage(
         tabPanel("Data Exploration",
                  br(),
                  tags$b("First, subset and create dataset in sidebar."),
-                 br(),
-                 br(),
-                 ("If graph disappers, make sure all requested inputs are selected. When a variable with downstream variables is changed, the downstream variables must be re-selected."),
                  br(),
                  br(),
                  selectizeInput(
@@ -200,6 +197,12 @@ ui <- fluidPage(
                                  "User Behavior Class" = "user_class")
                    ),
                    br(),
+                   actionButton(
+                     inputId = "summary1Button",
+                     label = "Create/Update Plot"
+                   ),
+                   br(),
+                   br(),
                    column(width = 6,
                           plotOutput("plot_single_cv")
                    ),
@@ -224,6 +227,12 @@ ui <- fluidPage(
                    br(),
                    uiOutput("gr_cv2_selector"),
                    br(),
+                   actionButton(
+                     inputId = "summary2Button",
+                     label = "Create/Update Plot",
+                   ),
+                   br(),
+                   br(),
                    column(width = 6,
                           plotOutput("plot_gr_cv")
                    ),
@@ -247,6 +256,12 @@ ui <- fluidPage(
                                  "Battery Drain (mAh/day)" = "batt_drain",
                                  "Data Usage (MB/day)" = "data_usage"),
                    ),
+                   br(),
+                   actionButton(
+                     inputId = "summary3Button",
+                     label = "Create/Update Plot",
+                   ),
+                   br(),
                    br(),
                    column(width = 6,
                           plotOutput("plot_single_nv")
@@ -285,6 +300,12 @@ ui <- fluidPage(
                      )
                    ),
                    br(),
+                   actionButton(
+                     inputId = "summary4Button",
+                     label = "Create/Update Plot",
+                   ),
+                   br(),
+                   br(),
                    column(width = 6,
                           plotOutput("plot_gr_nv")
                    ),
@@ -298,8 +319,8 @@ ui <- fluidPage(
                  # if numeric variable relationship summary is selected
                  conditionalPanel(
                    condition = "input.summary_type == 'rel_num_var_sum'",
-                   column(
-                     width = 5,
+                   # column(
+                   #   width = 5,
                      selectizeInput(
                        inputId = "nv_nv_nv1",
                        label = "Choose first numeric variable to summarize:",
@@ -328,10 +349,20 @@ ui <- fluidPage(
                      ),
                      br(),
                      #select catvar for faceting
-                     uiOutput("scPlot_cv_faceting_selector")
+                     uiOutput("scPlot_cv_faceting_selector"),
+#                   ),
+                   br(),
+                   actionButton(
+                     inputId = "summary5Button",
+                     label = "Create/Update Plot",
                    ),
-                   column(width = 7,
-                          plotOutput("plot_nv_nv"),
+                   br(),
+                   br(),
+                   column(width = 6,
+                          plotOutput("plot_nv_nv")
+                   ),
+                   column(width = 6,
+                          br(),
                           br(),
                           tableOutput("table_nv_nv")
                    )
@@ -365,6 +396,12 @@ ui <- fluidPage(
                    #choose second grouping variable color)
                    uiOutput("beeswarm_cv2_selector"),
                    br(),
+                   actionButton(
+                     inputId = "summary6Button",
+                     label = "Create/Update Plot"
+                   ),
+                   br(),
+                   br(),
                    column(width = 6,
                           plotOutput("plot_beeswarm")
                    ),
@@ -391,12 +428,11 @@ server <- function(input, output, session) {
   output$num_selector1 <-renderUI({
     selectizeInput(
       inputId = "num_var1",
-      label = "Choose Measurement to Filter (Required, Leave Range Set as Default if no Subsetting is Desired):",
-      choices = c("Choose One" = "",
+      label = "Choose Measurement to Filter:",
+      choices = c(#"Choose One" = "",
                   "Age" = "age",
                   "App Usage Time (min/day)" = "app_usage_time",
-                  "Number of Apps Installed" = "no_apps"),
-      selected = NULL
+                  "Number of Apps Installed" = "no_apps")
     )
   })
   
@@ -571,24 +607,26 @@ server <- function(input, output, session) {
   #Single Categorical Variables-------------------------------------------------
   #bar chart
   output$plot_single_cv <- renderPlot({
-    req(input$single_cv)
+    req(input$summary1Button) # input$summary1Button
+    single_cv <- isolate(input$single_cv)
     user_data <- data_subset()
-    xaxis <- as.character(input$single_cv)
+    xaxis <- as.character(single_cv)
     ggplot(user_data, aes_string(x = xaxis, fill = xaxis)) +
       geom_bar() +
-      labs(x = var_label(user_data[input$single_cv]),
+      labs(x = var_label(user_data[single_cv]),
            y = "Count",
-           title = paste("Bar Chart:", var_label(user_data[input$single_cv]))
+           title = paste("Bar Chart:", var_label(user_data[single_cv]))
       ) +
       theme(legend.position = "none")
   })
   
   #one way contingency table
   output$table_single_cv <- renderTable({
-    req(input$single_cv)
+    req(input$summary1Button)
+    single_cv <- isolate(input$single_cv)
     user_data <- data_subset()
     user_data |>
-      group_by(user_data[[input$single_cv]]) |>
+      group_by(user_data[[single_cv]]) |>
       summarize(count = n())
   }, colnames = FALSE)
   
@@ -642,103 +680,85 @@ server <- function(input, output, session) {
   
   #side-by-side bar chart
   output$plot_gr_cv  <- renderPlot({
-    req(input$gr_cv1,input$gr_cv2)
+    gr_cv1 <- isolate(input$gr_cv1)
+    gr_cv2 <- isolate(input$gr_cv2)
+    req(input$summary2Button, gr_cv1, gr_cv2)
     user_data <- data_subset()
-    # validate(
-    #   need("gender" %in% colnames(user_data) & "op_system" %in% colnames(user_data),
-    #        "Please go to the sidebar to specify and create a dataset with female, male or both, and iOS, Android or both for grouped summaries of categorical variables.")
-    # )
-    xaxis <- as.character(input$gr_cv1)
-    fill_var <- as.character(input$gr_cv2)
-    # if (input$gr_cv == "gender") fill_var <- as.character("op_system")
-    # if (input$gr_cv == "op_system") fill_var <- as.character("gender")
+    xaxis <- as.character(gr_cv1)
+    fill_var <- as.character(gr_cv2)
     ggplot(user_data, aes_string(x = xaxis, fill = fill_var)) +
       geom_bar(position = "dodge") +
-      labs(x = var_label(user_data[input$gr_cv1]),
-           title = paste("Bar Chart:", var_label(user_data[input$gr_cv1]), "Grouped by", var_label(user_data[input$gr_cv2]))
+      labs(x = var_label(user_data[gr_cv1]),
+           title = paste("Bar Chart:", var_label(user_data[gr_cv1]), "Grouped by", var_label(user_data[gr_cv2]))
       )
   })
   
   #two way contingency table
   output$table_gr_cv <- renderTable({
-    req(input$gr_cv1, input$gr_cv2)
+    gr_cv1 <- isolate(input$gr_cv1)
+    gr_cv2 <- isolate(input$gr_cv2)
+    req(input$summary2Button, gr_cv1, gr_cv2)
     user_data <- data_subset()
-    #       # validate(
-    #       #   need("gender" %in% colnames(user_data) & "op_system" %in% colnames(user_data),"")
-    #      )
-    #      gr1 <- as.character(input$gr_cv1)
-    #     gr2 <- as.character(input$gr_cv2)
-    # if (input$gr_cv == "gender") gr2 <- as.character("op_system")
-    # if (input$gr_cv == "op_system") gr2 <- as.character("gender")
     user_data |>
-      group_by(user_data[input$gr_cv1], user_data[input$gr_cv2]) |>
-      summarize(count = n()) #|>
-    #        pivot_wider(names_from = user_data[input$gr_cv2, values_from = count)
-    #      table(user_data[gr1],user_data[gr2])
+      group_by(user_data[gr_cv1], user_data[gr_cv2]) |>
+      summarize(count = n()) 
   }, colnames = FALSE)
   
   # Single Numeric Variables---------------------------------------------------
   output$plot_single_nv <- renderPlot({
-    req(input$single_nv)
+    single_nv <- isolate(input$single_nv)
+    req(input$summary3Button,single_nv)
     user_data <- data_subset()
-    # validate(
-    #   need(input$single_nv %in% colnames(user_data),"Please choose a numeric variable that is included in the user-specified dataset, or go to the sidebar to create another dataset that includes the desired numeric variable.")
-    # )
-    xaxis <- as.character(input$single_nv)
+    xaxis <- as.character(single_nv)
     ggplot(user_data, aes_string(x = xaxis)) +
       geom_density() +
-      labs(x = var_label(user_data[input$single_nv]),
+      labs(x = var_label(user_data[single_nv]),
            y = "Density",
-           title = paste("Density Plot:", var_label(user_data[input$single_nv]))
+           title = paste("Density Plot:", var_label(user_data[single_nv]))
       )
   })
   
   output$table_single_nv <- renderTable({
-    req(input$single_nv)
+    single_nv <- isolate(input$single_nv)
+    req(input$summary3Button,single_nv)
     user_data <- data_subset()
-    # validate(
-    #   need(input$single_nv %in% colnames(user_data),"")
-    #   )
     user_data |>
-      summarize("Mean" = mean(user_data[[input$single_nv]]),
-                "SD" = sd(user_data[[input$single_nv]]),
-                "Median" = median(user_data[[input$single_nv]])
+      summarize("Mean" = mean(user_data[[single_nv]]),
+                "SD" = sd(user_data[[single_nv]]),
+                "Median" = median(user_data[[single_nv]])
       )
   })
   
   #Grouped Numeric Variables---------------------------------------------------
   #grouped boxplots of numeric variables
   output$plot_gr_nv <- renderPlot({
-    req(input$gr_nv_gr, input$gr_nv_nv)
+    gr_nv_nv <- isolate(input$gr_nv_nv)
+    gr_nv_gr <- isolate(input$gr_nv_gr)
+    req(input$summary4Button,gr_nv_gr, gr_nv_nv)
     user_data <-data_subset()
-    # validate(
-    #   need(input$gr_nv_nv %in% colnames(user_data) & input$gr_nv_gr %in% colnames(user_data),
-    #        "Please choose a numeric variable and a grouping variable that are included in the user-specified dataset, or go to the sidebar to create another dataset that includes the desired variables.")
-    # )
-    xaxis <- as.character(input$gr_nv_gr)
-    yaxis <- as.character(input$gr_nv_nv)
+    xaxis <- as.character(gr_nv_gr)
+    yaxis <- as.character(gr_nv_nv)
     ggplot(user_data, aes_string(x = xaxis, y = yaxis, fill = xaxis)) +
       geom_boxplot() +
-      labs(x = var_label(user_data[input$gr_nv_gr]), 
-           y = var_label(user_data[input$gr_nv_nv]), 
-           title = paste("Boxplot:", var_label(user_data[input$gr_nv_nv]), 
-                         "by", var_label(user_data[input$gr_nv_gr]))
+      labs(x = var_label(user_data[gr_nv_gr]), 
+           y = var_label(user_data[gr_nv_nv]), 
+           title = paste("Boxplot:", var_label(user_data[gr_nv_nv]), 
+                         "by", var_label(user_data[gr_nv_gr]))
       ) +
       theme(legend.position = "none")
   })
   
   #numeric summaries of grouped numeric variables
   output$table_gr_nv <- renderTable({
-    req(input$gr_nv_gr, input$gr_nv_nv)
+    gr_nv_nv <- isolate(input$gr_nv_nv)
+    gr_nv_gr <- isolate(input$gr_nv_gr)
+    req(input$summary4Button,gr_nv_gr, gr_nv_nv)
     user_data <- data_subset()
-    validate(
-      need(input$gr_nv_nv %in% colnames(user_data) & input$gr_nv_gr %in% colnames(user_data),"")
-    )
     user_data |>
-      group_by( !!sym(input$gr_nv_gr)) |>
-      summarize("Mean" = mean(get(input$gr_nv_nv)),
-                "SD" = sd(get(input$gr_nv_nv)),
-                "Median" = median(get(input$gr_nv_nv))
+      group_by( !!sym(gr_nv_gr)) |>
+      summarize("Mean" = mean(get(gr_nv_nv)),
+                "SD" = sd(get(gr_nv_nv)),
+                "Median" = median(get(gr_nv_nv))
       )
   })
   
@@ -870,39 +890,39 @@ server <- function(input, output, session) {
   })
   
   #Plot
-  #graphical summaries of graphical numeric variables
+  #graphical summaries of numeric variables
   output$plot_nv_nv <- renderPlot({
-    req(input$nv_nv_nv1, input$nv_nv_nv2,input$scPlot_gr_cv, input$scPlot_cv_facet)
+    nv_nv_nv1 <- isolate(input$nv_nv_nv1)
+    nv_nv_nv2 <- isolate(input$nv_nv_nv2)
+    scPlot_gr_cv <- isolate(input$scPlot_gr_cv)
+    scPlot_cv_facet <- isolate(input$scPlot_cv_facet)
+    req(input$summary5Button, nv_nv_nv1, nv_nv_nv2,scPlot_gr_cv, scPlot_cv_facet)
     user_data <- data_subset()
-    validate(
-      need(input$nv_nv_nv1 %in% colnames(user_data) & input$nv_nv_nv1 %in% colnames(user_data),
-           "Please choose two numeric variables that are included in the user-specified dataset, or go to the sidebar to create another dataset that includes the desired variables.")
-    )
-    ggplot(user_data, aes_string(x = input$nv_nv_nv1, 
-                                 y = input$nv_nv_nv2,
-                                 color = input$scPlot_gr_cv)) +
+    ggplot(user_data, aes_string(x = nv_nv_nv1, 
+                                 y = nv_nv_nv2,
+                                 color = scPlot_gr_cv)) +
       geom_point() +
       geom_smooth(method = lm) +
-      labs(x = var_label(user_data[input$nv_nv_nv1]), 
-           y = var_label(user_data[input$nv_nv_nv2]),
-           title = paste("Scatter Plot:", var_label(user_data[input$nv_nv_nv2]), 
-                         "by", var_label(user_data[input$nv_nv_nv1]))
-      ) +
-      facet_wrap(~get(input$scPlot_cv_facet))
+      labs(x = var_label(user_data[nv_nv_nv1]), 
+           y = var_label(user_data[nv_nv_nv2]),
+           title = paste("Scatter Plot:", var_label(user_data[nv_nv_nv2]), 
+                         "by", var_label(user_data[nv_nv_nv1]), "faceted by", var_label(user_data[scPlot_cv_facet]))) +
+      facet_wrap(~get(scPlot_cv_facet))
   })
   
   # #Table
   # #numeric summaries of grouped numeric variables
   # #need to update still copied and pasted from elsewhere
   output$table_nv_nv <- renderTable({
-    req(input$nv_nv_nv1, input$nv_nv_nv2, input$scPlot_gr_cv, input$scPlot_cv_facet)
+    nv_nv_nv1 <- isolate(input$nv_nv_nv1)
+    nv_nv_nv2 <- isolate(input$nv_nv_nv2)
+    scPlot_gr_cv <- isolate(input$scPlot_gr_cv)
+    scPlot_cv_facet <- isolate(input$scPlot_cv_facet)
+    req(input$summary5Button, nv_nv_nv1, nv_nv_nv2,scPlot_gr_cv, scPlot_cv_facet)
     user_data <- data_subset()
-    # validate(
-    #   need(input$gr_nv_nv %in% colnames(user_data) & input$gr_nv_gr %in% colnames(user_data),"")
-    # )
     user_data |>
-      group_by(!!sym(input$scPlot_gr_cv),!!sym(input$scPlot_cv_facet)) |>
-      summarize("Correlation" = cor(get(input$nv_nv_nv1), get(input$nv_nv_nv2)))
+      group_by(!!sym(scPlot_gr_cv),!!sym(scPlot_cv_facet)) |>
+      summarize("Correlation" = cor(get(nv_nv_nv1), get(nv_nv_nv2)))
   })
   
   #Beeswarm Tab----------------------------------------------------------------
@@ -954,30 +974,36 @@ server <- function(input, output, session) {
   
   #Beeswarm Plot
   output$plot_beeswarm <- renderPlot({
-    req(input$beeswarm_nv, input$beeswarm_cv1, input$beeswarm_cv2)
+    beeswarm_nv <- isolate(input$beeswarm_nv)
+    beeswarm_cv1 <- isolate(input$beeswarm_cv1)
+    beeswarm_cv2 <- isolate(input$beeswarm_cv2)
+    req(input$summary6Button,beeswarm_nv, beeswarm_cv1, beeswarm_cv2)
     user_data <-data_subset()
-    xaxis <- as.character(input$beeswarm_cv1)
-    yaxis <- as.character(input$beeswarm_nv)
-    col_cv <- as.character(input$beeswarm_cv2)
+    xaxis <- as.character(beeswarm_cv1)
+    yaxis <- as.character(beeswarm_nv)
+    col_cv <- as.character(beeswarm_cv2)
     ggplot(user_data, aes_string(x = xaxis, y = yaxis, color = col_cv)) +
       geom_beeswarm() +
-      labs(x = var_label(user_data[input$beeswarm_cv1]), 
-           y = var_label(user_data[input$beeswarm_nv]), 
-           title = paste("Beeswarm Plot:", var_label(user_data[input$beeswarm_nv]),                            "by", var_label(user_data[input$beeswarm_cv1]))
+      labs(x = var_label(user_data[beeswarm_cv1]), 
+           y = var_label(user_data[beeswarm_nv]), 
+           title = paste("Beeswarm Plot:", var_label(user_data[beeswarm_nv]),                            "by", var_label(user_data[beeswarm_cv1]))
       ) +
-      scale_color_discrete(var_label(user_data[input$beeswarm_cv2]))
+      scale_color_discrete(var_label(user_data[beeswarm_cv2]))
   })
   
   #Beeswarm Data Summary Table
   
   output$table_beeswarm <- renderTable({
-    req(input$beeswarm_nv, input$beeswarm_cv1, input$beeswarm_cv2)
+    beeswarm_nv <- isolate(input$beeswarm_nv)
+    beeswarm_cv1 <- isolate(input$beeswarm_cv1)
+    beeswarm_cv2 <- isolate(input$beeswarm_cv2)
+    req(input$summary6Button,beeswarm_nv, beeswarm_cv1, beeswarm_cv2)
     user_data <- data_subset()
     user_data |>
-      group_by( !!sym(input$beeswarm_cv1), !!sym(input$beeswarm_cv2)) |>
-      summarize("Mean" = mean(get(input$beeswarm_nv)),
-                "SD" = sd(get(input$beeswarm_nv)),
-                "Median" = median(get(input$beeswarm_nv))
+      group_by( !!sym(beeswarm_cv1), !!sym(beeswarm_cv2)) |>
+      summarize("Mean" = mean(get(beeswarm_nv)),
+                "SD" = sd(get(beeswarm_nv)),
+                "Median" = median(get(beeswarm_nv))
       )
   })
   

@@ -10,6 +10,7 @@ library(tidyverse)
 library(shiny)
 library(labelled)
 library(bslib)
+library(ggbeeswarm)
 
 
 # Load dataset -------------------------------------------------------------------
